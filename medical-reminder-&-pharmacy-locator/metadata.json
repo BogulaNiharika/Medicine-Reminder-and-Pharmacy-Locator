@@ -1,0 +1,6 @@
+{
+  "name": "Medical Reminder & Pharmacy Locator",
+  "description": "Complete medicine reminders, personalized adherence calendar, and a live nearby pharmacy locator with OSM Overpass API.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

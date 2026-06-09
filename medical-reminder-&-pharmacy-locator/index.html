@@ -1,0 +1,2019 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CareMeds Dashboard</title>
+  <!-- Google Fonts & Leaflet & Lucide -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Outfit:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: { DEFAULT: '#0F4C81', light: '#1F63A0', dark: '#0A3459', 50: '#F0F6FC' },
+            mint: { DEFAULT: '#00B894', light: '#55EFC4', dark: '#00876C' }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+            display: ['Outfit', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-[#F4F7FA] text-[#1A202C] font-sans min-h-screen transition-colors duration-200 dark:bg-slate-950 dark:text-slate-100">
+
+  <!-- Main Grid Wrapper -->
+  <div class="flex flex-col md:flex-row min-h-screen relative overflow-hidden">
+    <!-- Sidebar -->
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-64 bg-[#0F4C81] text-white flex flex-col transition-transform duration-200 -translate-x-full md:translate-x-0 md:static md:h-screen dark:bg-[#0A2E50]">
+      <div class="h-20 flex items-center justify-between px-6 border-b border-[#1A5C96] dark:border-slate-800 bg-[#0F4C81]">
+        <div class="flex items-center gap-2.5 text-2xl font-bold tracking-tight">
+          <span class="text-[#00B894]">✚</span>
+          <span class="font-display font-bold text-lg tracking-tight text-white">CareMeds Core</span>
+        </div>
+        <button onclick="toggleSidebar()" class="md:hidden p-1.5 rounded-lg text-white hover:bg-[#1A5C96] focus:outline-none">
+          ✕
+        </button>
+      </div>
+      <nav class="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto" id="sidebar-nav"></nav>
+      <div class="p-4 border-t border-[#1A5C96] dark:border-slate-800/85">
+        <div class="flex items-center gap-3 p-3 rounded-xl bg-[#1A5C96]/60 dark:bg-slate-850">
+          <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center font-bold text-white text-sm" id="p-avatar">U</div>
+          <div class="flex-1 min-w-0">
+            <p class="font-semibold text-sm truncate text-white" id="p-nav-name">Patient User</p>
+            <p class="text-xs text-white/75 truncate" id="p-nav-blood">Blood: O+</p>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Content Area Container -->
+    <div class="flex-1 flex flex-col min-w-0 relative h-screen overflow-y-auto">
+      <!-- Navbar / Top Bar -->
+      <header class="h-20 flex items-center justify-between px-8 border-b border-gray-200 bg-white sticky top-0 z-35 dark:bg-slate-900 dark:border-slate-800 shadow-sm animate-in fade-in duration-200">
+        <div class="flex items-center gap-4">
+          <button onclick="toggleSidebar()" class="p-2 md:hidden rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">
+            ☰
+          </button>
+          <div>
+            <h1 class="font-display font-bold text-xl text-[#1A202C] dark:text-white" id="view-title">Dashboard</h1>
+            <p class="text-xs text-gray-500 font-medium" id="current-date-str">Loading calendar...</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 sm:gap-6">
+          <!-- Notification Bell -->
+          <button onclick="switchView('notifications')" class="relative p-2 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 text-xl">
+            🔔
+            <span id="unread-badge" class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full border-2 border-white dark:border-slate-900 hidden">0</span>
+          </button>
+          <!-- Theme Toggle -->
+          <button onclick="toggleTheme()" class="p-2 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 text-xl" title="Toggle Theme">
+            🌓
+          </button>
+          <!-- Add Medicine Button -->
+          <button onclick="openAddModal()" class="flex items-center gap-1.5 px-5 py-2.5 bg-[#00B894] hover:bg-[#009E7E] text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-emerald-500/10 cursor-pointer">
+            ➕ <span class="hidden sm:inline">New Medicine</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Main Contents View -->
+      <main id="main-content" class="flex-1 p-6 space-y-6 md:p-8"></main>
+    </div>
+  </div>
+
+  <!-- Onboarding Modal -->
+  <div id="onboarding-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl relative border border-slate-100 dark:bg-slate-900 dark:border-slate-800 animate-in fade-in zoom-in-95 duration-200">
+      <div class="text-center space-y-4 mb-6">
+        <div class="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center text-4xl mx-auto">🌸</div>
+        <h2 class="font-display font-bold text-2xl">Welcome to CareMeds</h2>
+        <p class="text-slate-500 text-sm">Your all-in-one personalized healthcare portal. Let's start with your name to customize your assistant environment.</p>
+      </div>
+      <form onsubmit="handleOnboardingSubmit(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Patient Username</label>
+          <input type="text" id="onboard-name" required placeholder="e.g. Eleanor Vance" class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white dark:bg-slate-800 dark:border-slate-700 dark:focus:bg-slate-800" />
+        </div>
+        <button type="submit" class="w-full py-3.5 bg-mint hover:bg-mint-dark text-white font-bold rounded-xl shadow-md shadow-mint/20 transition-all">
+          Get Started
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Medicine Modal (Add / Edit) -->
+  <div id="med-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl relative border border-slate-100 dark:bg-slate-900 dark:border-slate-800">
+      <div class="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+        <h2 id="med-modal-title" class="font-display font-bold text-xl">Add Medication</h2>
+        <button onclick="closeMedModal()" class="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">✕</button>
+      </div>
+      <form onsubmit="handleMedSubmit(event)" class="p-6 space-y-5">
+        <input type="hidden" id="med-form-id" />
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Medicine Name</label>
+            <input type="text" id="med-name" required placeholder="Amoxicillin" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:bg-slate-800 dark:border-slate-700" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Dosage / Strength</label>
+            <input type="text" id="med-dosage" required placeholder="500mg" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:bg-slate-800 dark:border-slate-700" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Medicine Type</label>
+          <div class="grid grid-cols-4 gap-2">
+            <label class="border border-slate-200 dark:border-slate-700 rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-850 [&:has(input:checked)]:border-primary [&:has(input:checked)]:bg-primary/5">
+              <input type="radio" name="med-type" value="tablet" checked class="sr-only" />
+              <span class="text-xl mb-1">💊</span>
+              <span class="text-xs font-semibold">Tablet</span>
+            </label>
+            <label class="border border-slate-200 dark:border-slate-700 rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-850 [&:has(input:checked)]:border-primary [&:has(input:checked)]:bg-primary/5">
+              <input type="radio" name="med-type" value="capsule" class="sr-only" />
+              <span class="text-xl mb-1">💊</span>
+              <span class="text-xs font-semibold">Capsule</span>
+            </label>
+            <label class="border border-slate-200 dark:border-slate-700 rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-850 [&:has(input:checked)]:border-primary [&:has(input:checked)]:bg-primary/5">
+              <input type="radio" name="med-type" value="syrup" class="sr-only" />
+              <span class="text-xl mb-1">🧪</span>
+              <span class="text-xs font-semibold">Syrup</span>
+            </label>
+            <label class="border border-slate-200 dark:border-slate-700 rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-850 [&:has(input:checked)]:border-primary [&:has(input:checked)]:bg-primary/5">
+              <input type="radio" name="med-type" value="injection" class="sr-only" />
+              <span class="text-xl mb-1">💉</span>
+              <span class="text-xs font-semibold">Injection</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Frequency</label>
+            <select id="med-frequency" onchange="handleFrequencyChange()" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:bg-slate-800 dark:border-slate-700">
+              <option value="once">Once Daily</option>
+              <option value="twice">Twice Daily</option>
+              <option value="thrice">Thrice Daily</option>
+              <option value="custom">Custom Selector</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Meal Reference</label>
+            <select id="med-meal" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:bg-slate-800 dark:border-slate-700">
+              <option value="after">After Food</option>
+              <option value="before">Before Food</option>
+              <option value="with">With Food</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Schedule Intervals</label>
+          <div class="flex flex-wrap gap-4 p-3.5 rounded-xl bg-slate-50 dark:bg-slate-850 border border-slate-100 dark:border-slate-800">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" id="slot-morning" checked class="rounded text-primary focus:ring-primary w-4.5 h-4.5" />
+              <span class="text-sm font-medium">Morning (08:00 AM)</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" id="slot-afternoon" class="rounded text-primary focus:ring-primary w-4.5 h-4.5" />
+              <span class="text-sm font-medium">Afternoon (01:00 PM)</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" id="slot-evening" class="rounded text-primary focus:ring-primary w-4.5 h-4.5" />
+              <span class="text-sm font-medium">Evening (06:00 PM)</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" id="slot-night" class="rounded text-primary focus:ring-primary w-4.5 h-4.5" />
+              <span class="text-sm font-medium">Night (09:00 PM)</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Start Date</label>
+            <input type="date" id="med-start" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:bg-slate-800 dark:border-slate-700" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">End Date</label>
+            <input type="date" id="med-end" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:bg-slate-800 dark:border-slate-700" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Notes / Doctor Name</label>
+          <input type="text" id="med-notes" placeholder="e.g. Dr. Roberts - take with full glass of water" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:bg-slate-800 dark:border-slate-700" />
+        </div>
+
+        <div class="flex gap-3 pt-3">
+          <button type="button" onclick="closeMedModal()" class="flex-1 py-3 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 font-bold transition-colors">Cancel</button>
+          <button type="submit" class="flex-1 py-3 bg-primary hover:bg-primary-dark text-white rounded-xl font-bold transition-colors shadow-sm shadow-primary/20">Save Medication</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Day Log Modal -->
+  <div id="day-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-md w-full shadow-2xl relative border border-slate-100 dark:bg-slate-900 dark:border-slate-800">
+      <div class="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+        <div>
+          <h2 class="font-display font-bold text-xl">Daily Log Details</h2>
+          <p id="day-modal-date" class="text-xs text-slate-400 font-semibold"></p>
+        </div>
+        <button onclick="closeDayModal()" class="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">✕</button>
+      </div>
+      <div id="day-modal-content" class="p-6 max-h-[60vh] overflow-y-auto space-y-4">
+        <!-- Rendered Daily logs in JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Feed -->
+  <div id="toast-container" class="fixed bottom-6 right-6 z-50 space-y-2 max-w-sm pointer-events-none"></div>
+
+  <!-- Custom Core JS Script -->
+  <script>
+    // State Registry
+    const AppState = {
+      profile: { name: '', age: '28', bloodGroup: 'B+', allergies: 'Sulfa medications', emergencyContactName: 'Diana Vance', emergencyContactPhone: '+1-555-0192', conditions: 'Asthma, Mild Hypertension' },
+      medicines: [],
+      dailyLogs: {},
+      settings: { theme: 'light', notificationsEnabled: true },
+      notifications: [],
+      activeView: 'dashboard',
+      sidebarOpen: false
+    };
+
+    // System constants for schedule calculations
+    const timeSlots = { morning: '08:00', afternoon: '13:00', evening: '18:00', night: '21:00' };
+    const healthTips = [
+      "Stay hydrated! Proper water intake supports active heart and kidney function.",
+      "Always consume medications exactly at the scheduled timestamps to maintain efficacy levels.",
+      "Refrain from taking medications in complete darkness to eliminate accidental dosages.",
+      "Store tablets in cool, dark closets, avoiding dynamic humidity points of standard bath spaces.",
+      "Always inspect clinical warnings for meal interactions before taking prescriptions.",
+      "Keep a historical log of all adverse reaction patterns to present to your clinical physician."
+    ];
+
+    // Local Storage synchronization
+    function loadAppState() {
+      const saved = localStorage.getItem('caremeds_dashboard_data');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed.profile) AppState.profile = { ...AppState.profile, ...parsed.profile };
+          if (parsed.medicines) AppState.medicines = parsed.medicines;
+          if (parsed.dailyLogs) AppState.dailyLogs = parsed.dailyLogs;
+          if (parsed.settings) AppState.settings = { ...AppState.settings, ...parsed.settings };
+          if (parsed.notifications) AppState.notifications = parsed.notifications;
+        } catch (e) {
+          console.error("Critical parse failure on state restore", e);
+        }
+      } else {
+        // Pre-populate with realistic medical data on initial clean load
+        seedSampleMedicines();
+      }
+    }
+
+    function saveAppState() {
+      localStorage.setItem('caremeds_dashboard_data', JSON.stringify(AppState));
+    }
+
+    function seedSampleMedicines() {
+      const todayStr = formatLocalDate(new Date());
+      const nextWeekStr = formatLocalDate(new Date(Date.now() + 7 * 86400000));
+      const nextMonthStr = formatLocalDate(new Date(Date.now() + 30 * 86400000));
+
+      AppState.medicines = [
+        {
+          id: '1',
+          name: 'Lisinopril',
+          dosage: '10mg',
+          type: 'tablet',
+          frequency: 'once',
+          slots: ['morning'],
+          startDate: todayStr,
+          endDate: nextMonthStr,
+          meal: 'before',
+          notes: 'BP treatment. Take on empty stomach with fresh water.'
+        },
+        {
+          id: '2',
+          name: 'Amoxicillin Trihydrate',
+          dosage: '500mg',
+          type: 'capsule',
+          frequency: 'twice',
+          slots: ['morning', 'night'],
+          startDate: todayStr,
+          endDate: nextWeekStr,
+          meal: 'after',
+          notes: 'Full active recovery course. Take with light snack.'
+        }
+      ];
+      saveAppState();
+    }
+
+    // Dynamic Navigation and Siderail definition
+    const navItems = [
+      { id: 'dashboard', label: 'Dashboard', icon: '🏠' },
+      { id: 'medicines', label: 'My Medicines', icon: '💊' },
+      { id: 'schedule', label: 'Daily Schedule', icon: '🗓️' },
+      { id: 'calendar', label: 'Adherence Calendar', icon: '📅' },
+      { id: 'locator', label: 'Find Pharmacy', icon: '🗺️' },
+      { id: 'profile', label: 'Patient Profile', icon: '👤' },
+      { id: 'notifications', label: 'Alert History', icon: '🔔' },
+      { id: 'settings', label: 'System Settings', icon: '⚙️' }
+    ];
+
+    function renderSidebar() {
+      const container = document.getElementById('sidebar-nav');
+      container.innerHTML = navItems.map(item => {
+        const isActive = AppState.activeView === item.id;
+        const activeClasses = isActive 
+          ? 'bg-[#1A5C96] text-white font-medium shadow-md dark:bg-mint dark:text-slate-900 animate-in fade-in duration-150' 
+          : 'text-white/75 hover:bg-[#1A5C96] hover:text-white transition-all';
+        return `
+          <button onclick="switchView('${item.id}')" class="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all cursor-pointer text-sm ${activeClasses}">
+            <div class="flex items-center gap-3">
+              <span class="text-base">${item.icon}</span>
+              <span>${item.label}</span>
+            </div>
+            ${item.id === 'notifications' && getUnreadNotificationsCount() > 0 
+              ? `<span class="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">${getUnreadNotificationsCount()}</span>` 
+              : ''}
+          </button>
+        `;
+      }).join('');
+
+      // Update avatar and labels
+      document.getElementById('p-nav-name').innerText = AppState.profile.name || 'Set Your Profile';
+      document.getElementById('p-nav-blood').innerText = `Blood Group: ${AppState.profile.bloodGroup || 'N/A'}`;
+      document.getElementById('p-avatar').innerText = (AppState.profile.name || 'U').charAt(0).toUpperCase();
+    }
+
+    function switchView(viewId) {
+      AppState.activeView = viewId;
+      renderSidebar();
+      renderActiveView();
+      if (viewId === 'locator') {
+        setTimeout(initLeafletMap, 100);
+      }
+      if (window.innerWidth < 768) {
+        toggleSidebar(false);
+      }
+      document.getElementById('view-title').innerText = navItems.find(n => n.id === viewId).label;
+      saveAppState();
+    }
+
+    function toggleSidebar(forceState) {
+      const sidebar = document.getElementById('sidebar');
+      const open = forceState !== undefined ? forceState : sidebar.classList.contains('-translate-x-full');
+      if (open) {
+        sidebar.classList.remove('-translate-x-full');
+      } else {
+        sidebar.classList.add('-translate-x-full');
+      }
+    }
+
+    // Toast Generator
+    function triggerToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      const colorMap = {
+        success: 'bg-emerald-500 border-emerald-600 text-white',
+        info: 'bg-primary border-primary-light text-white',
+        warning: 'bg-amber-500 border-amber-600 text-white',
+        danger: 'bg-red-500 border-red-600 text-white'
+      };
+      toast.className = `p-4 rounded-xl border shadow-xl flex items-center justify-between gap-3 animate-in slide-in-from-right duration-200 pointer-events-auto ${colorMap[type] || colorMap.success}`;
+      toast.innerHTML = `
+        <div class="flex items-center gap-2">
+          <span>🔔</span>
+          <span class="text-sm font-semibold">${message}</span>
+        </div>
+        <button onclick="this.parentElement.remove()" class="text-white hover:opacity-80">✕</button>
+      `;
+      container.appendChild(toast);
+      setTimeout(() => { if (toast.parentElement) toast.remove(); }, 4000);
+    }
+
+    // Utility Clocks and Local Dates
+    function formatLocalDate(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    function refreshDateTime() {
+      const now = new Date();
+      const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+      document.getElementById('current-date-str').innerText = now.toLocaleDateString('en-US', options) + " | " + now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+
+    // Application Lifecycle Setup
+    window.addEventListener('DOMContentLoaded', () => {
+      loadAppState();
+      refreshThemeUI();
+      renderSidebar();
+      renderActiveView();
+      setInterval(refreshDateTime, 1000);
+      setInterval(checkNextDoseTimer, 1000); // Live countdown clock
+      setInterval(pollActiveMedicationReminders, 60000); // Poll for alerts every minute
+
+      // Request Web Push Permissions on first gesture
+      if (window.Notification && Notification.permission === 'default') {
+        setTimeout(() => {
+          Notification.requestPermission();
+        }, 5000);
+      }
+
+      // First run onboarding modal trigger
+      if (!AppState.profile.name) {
+        document.getElementById('onboarding-modal').classList.remove('hidden');
+      }
+    });
+
+    // Onboarding Handler
+    function handleOnboardingSubmit(e) {
+      e.preventDefault();
+      const name = document.getElementById('onboard-name').value.trim();
+      if (name) {
+        AppState.profile.name = name;
+        document.getElementById('onboarding-modal').classList.add('hidden');
+        triggerToast(`Welcome aboard, ${name}! Your record has been configured.`, 'success');
+        saveAppState();
+        renderSidebar();
+        renderActiveView();
+      }
+    }
+
+    // Dynamic View Builders
+    function renderActiveView() {
+      const main = document.getElementById('main-content');
+      
+      switch (AppState.activeView) {
+        case 'dashboard':
+          main.innerHTML = buildDashboardViewHTML();
+          renderAdherenceChart();
+          break;
+        case 'medicines':
+          main.innerHTML = buildMedicinesViewHTML();
+          break;
+        case 'schedule':
+          main.innerHTML = buildScheduleViewHTML();
+          break;
+        case 'calendar':
+          main.innerHTML = buildCalendarViewHTML();
+          renderAdherenceCalendar();
+          break;
+        case 'locator':
+          main.innerHTML = buildLocatorViewHTML();
+          break;
+        case 'profile':
+          main.innerHTML = buildProfileViewHTML();
+          break;
+        case 'notifications':
+          main.innerHTML = buildNotificationsViewHTML();
+          updateUnreadBadge();
+          break;
+        case 'settings':
+          main.innerHTML = buildSettingsViewHTML();
+          break;
+        default:
+          main.innerHTML = `<p>Section Loading...</p>`;
+      }
+    }
+
+    // Theme Switchers
+    function toggleTheme() {
+      AppState.settings.theme = AppState.settings.theme === 'dark' ? 'light' : 'dark';
+      saveAppState();
+      refreshThemeUI();
+    }
+
+    function refreshThemeUI() {
+      if (AppState.settings.theme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    }
+
+    // --- LOGIC: COMPUTE DAILY SCHEDULES & ADHERENCE ---
+    function getTodayDoses() {
+      const todayStr = formatLocalDate(new Date());
+      const list = [];
+
+      AppState.medicines.forEach(med => {
+        // Evaluate if medication course covers today is active
+        if (todayStr >= med.startDate && todayStr <= med.endDate) {
+          med.slots.forEach(slot => {
+            const logKey = `${med.id}_${slot}`;
+            const logEntry = AppState.dailyLogs[todayStr]?.[logKey];
+            let status = 'upcoming';
+
+            if (logEntry) {
+              status = logEntry.status; // 'taken' | 'skipped'
+            } else {
+              // Calculate if slot is overdue
+              const [hour, min] = timeSlots[slot].split(':').map(Number);
+              const now = new Date();
+              const slotTime = new Date();
+              slotTime.setHours(hour, min, 0, 0);
+
+              if (now.getTime() > slotTime.getTime() + 1800000) { // Over 30 mins late
+                status = 'overdue';
+              } else if (Math.abs(now.getTime() - slotTime.getTime()) <= 1800000) {
+                status = 'due';
+              }
+            }
+
+            list.push({
+              medId: med.id,
+              name: med.name,
+              dosage: med.dosage,
+              slot: slot,
+              type: med.type,
+              notes: med.notes,
+              meal: med.meal,
+              timeLabel: timeSlots[slot],
+              status: status
+            });
+          });
+        }
+      });
+
+      return list.sort((a,b) => {
+        const ta = a.timeLabel.replace(':','');
+        const tb = b.timeLabel.replace(':','');
+        return parseInt(ta) - parseInt(tb);
+      });
+    }
+
+    function logDoseAction(medId, slot, status, dateStr = null) {
+      const activeDate = dateStr || formatLocalDate(new Date());
+      if (!AppState.dailyLogs[activeDate]) {
+        AppState.dailyLogs[activeDate] = {};
+      }
+      AppState.dailyLogs[activeDate][`${medId}_${slot}`] = {
+        status: status,
+        updatedAt: new Date().toISOString()
+      };
+      
+      triggerToast(`Dose marked as ${status} successfully.`, status === 'taken' ? 'success' : 'warning');
+      saveAppState();
+      renderActiveView();
+      renderSidebar();
+    }
+
+    function calculateStreak() {
+      let streak = 0;
+      let curr = new Date();
+      
+      while (true) {
+        const dStr = formatLocalDate(curr);
+        let dayMedCount = 0;
+        let dayTakenCount = 0;
+
+        AppState.medicines.forEach(med => {
+          if (dStr >= med.startDate && dStr <= med.endDate) {
+            med.slots.forEach(slot => {
+              dayMedCount++;
+              if (AppState.dailyLogs[dStr]?.[`${med.id}_${slot}`]?.status === 'taken') {
+                dayTakenCount++;
+              }
+            });
+          }
+        });
+
+        if (dayMedCount === 0) {
+          // If no meds scheduled, bypass or skip to previous day
+        } else if (dayTakenCount === dayMedCount) {
+          streak++;
+        } else {
+          break; // Streak broken
+        }
+        
+        // Go back one day
+        curr.setDate(curr.getDate() - 1);
+        if (streak > 365) break; // Infinite safety loop guard
+      }
+      return streak;
+    }
+
+    // Live countdown calculations
+    function checkNextDoseTimer() {
+      const element = document.getElementById('countdown-display');
+      if (!element) return;
+
+      const now = new Date();
+      const todayStr = formatLocalDate(now);
+      let nextDose = null;
+      let minDiff = Infinity;
+
+      AppState.medicines.forEach(med => {
+        if (todayStr >= med.startDate && todayStr <= med.endDate) {
+          med.slots.forEach(slot => {
+            const logEntry = AppState.dailyLogs[todayStr]?.[`${med.id}_${slot}`];
+            if (!logEntry) { // Pending dose
+              const [h, m] = timeSlots[slot].split(':').map(Number);
+              const dTime = new Date();
+              dTime.setHours(h, m, 0, 0);
+
+              const diff = dTime.getTime() - now.getTime();
+              if (diff > 0 && diff < minDiff) {
+                minDiff = diff;
+                nextDose = { med, slot, timeLabel: timeSlots[slot] };
+              }
+            }
+          });
+        }
+      });
+
+      if (nextDose) {
+        const totalSecs = Math.floor(minDiff / 1000);
+        const hrs = String(Math.floor(totalSecs / 3600)).padStart(2, '0');
+        const mins = String(Math.floor((totalSecs % 3600) / 60)).padStart(2, '0');
+        const secs = String(totalSecs % 60).padStart(2, '0');
+
+        element.innerHTML = `
+          <div class="space-y-1">
+            <span class="text-xs bg-primary/20 text-primary dark:text-mint dark:bg-mint/10 border border-primary/20 dark:border-mint/20 px-2 py-0.5 rounded-full font-bold">NEXT DUE</span>
+            <p class="font-display font-medium text-lg text-slate-800 dark:text-slate-100">${nextDose.med.name} (${nextDose.med.dosage})</p>
+            <p class="font-mono text-3xl font-bold text-primary dark:text-mint tracking-tight">${hrs}:${mins}:${secs}</p>
+            <p class="text-[11px] text-slate-400">Scheduled time slot: <strong class="text-slate-500">${nextDose.timeLabel}</strong></p>
+          </div>
+        `;
+      } else {
+        element.innerHTML = `
+          <div class="py-2 text-center">
+            <p class="text-2xl text-slate-300 dark:text-slate-700">☀️</p>
+            <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">No more pending doses</p>
+            <p class="text-[11px] text-slate-500">All planned items taken or completed today!</p>
+          </div>
+        `;
+      }
+    }
+
+
+    // --- VIEW BUILDERS ---
+
+    // 1. DASHBOARD VIEW CODE
+    function buildDashboardViewHTML() {
+      const todayDoses = getTodayDoses();
+      const taken = todayDoses.filter(d => d.status === 'taken').length;
+      const skipped = todayDoses.filter(d => d.status === 'skipped').length;
+      const pending = todayDoses.length - taken - skipped;
+      
+      const streak = calculateStreak();
+      const randomTip = healthTips[Math.floor((new Date().getDate() + new Date().getMonth()) % healthTips.length)];
+
+      return `
+        <!-- Top Stats Row -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 animate-in fade-in duration-300">
+          <!-- Streak Card -->
+          <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 dark:bg-slate-900 dark:border-slate-850">
+            <p class="text-gray-400 text-xs font-bold uppercase tracking-wider">Consistency Streak</p>
+            <div class="flex items-end space-x-2 mt-1">
+              <h2 class="text-3xl font-bold text-[#0F4C81] dark:text-white">${streak}</h2>
+              <p class="text-sm text-gray-400 mb-1">Days</p>
+            </div>
+            <div class="flex mt-3 space-x-1">
+              <div class="h-2 flex-1 bg-[#00B894] rounded-full"></div>
+              <div class="h-2 flex-1 bg-[#00B894] rounded-full"></div>
+              <div class="h-2 flex-1 bg-[#00B894] rounded-full"></div>
+              <div class="h-2 flex-1 ${streak > 3 ? 'bg-[#00B894]' : 'bg-gray-200'} rounded-full"></div>
+            </div>
+          </div>
+
+          <!-- Taken Card -->
+          <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 dark:bg-slate-900 dark:border-slate-850">
+            <p class="text-gray-400 text-xs font-bold uppercase tracking-wider">Taken Today</p>
+            <div class="flex items-end space-x-2 mt-1">
+              <h2 class="text-3xl font-bold text-[#0F4C81] dark:text-emerald-400">${taken}</h2>
+              <p class="text-sm text-gray-400 mb-1">/ ${todayDoses.length} Doses</p>
+            </div>
+            <div class="w-full bg-gray-100 h-1.5 mt-3 rounded-full overflow-hidden dark:bg-slate-800">
+              <div class="bg-[#00B894] h-full" style="width: ${todayDoses.length > 0 ? (taken / todayDoses.length) * 100 : 0}%"></div>
+            </div>
+          </div>
+
+          <!-- Pending Card -->
+          <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 dark:bg-slate-900 dark:border-slate-850">
+            <p class="text-gray-400 text-xs font-bold uppercase tracking-wider">Pending Doses</p>
+            <div class="flex items-end space-x-2 mt-1">
+              <h2 class="text-3xl font-bold text-[#0F4C81] dark:text-amber-400">${pending}</h2>
+              <p class="text-sm text-gray-400 mb-1">Tasks</p>
+            </div>
+            <div class="mt-3 text-[10px] text-gray-500 italic">Be careful to take meds in active slots!</div>
+          </div>
+
+          <!-- Next Dose Countdown Card -->
+          <div id="countdown-display" class="bg-[#0F4C81] p-5 rounded-2xl shadow-lg text-white relative overflow-hidden text-center">
+            <div class="absolute -right-4 -top-4 w-16 h-16 bg-white/10 rounded-full"></div>
+            <p class="text-white/70 text-xs font-bold uppercase tracking-wider">Next Dose</p>
+            <h2 class="text-2xl font-bold mt-2">--:--:--</h2>
+            <p class="text-[11px] text-white/90 mt-1">Calculating slots...</p>
+          </div>
+        </section>
+
+        <!-- Dynamic Grid layout -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <!-- ColumnLeft -->
+          <div class="lg:col-span-8 space-y-6">
+            <!-- Welcome Header Card -->
+            <div class="bg-gradient-to-r from-[#0F4C81] to-[#1A5C96] text-white rounded-2xl p-6 md:p-8 relative overflow-hidden shadow-lg dark:from-slate-900 dark:to-slate-850 dark:border dark:border-slate-800">
+              <div class="relative z-10 space-y-2 max-w-lg">
+                <span class="text-xs bg-white/20 px-3 py-1 rounded-full font-bold uppercase tracking-wider">HEALTH WORKSPACE ACTIVE</span>
+                <h2 class="font-display font-bold text-2xl md:text-3xl">Welcome back, ${AppState.profile.name || 'Sarah'}</h2>
+                <p class="text-white/90 text-sm leading-relaxed">${randomTip}</p>
+                <div class="pt-4 flex flex-wrap gap-3">
+                  <button onclick="openAddModal()" class="px-4 py-2 bg-[#00B894] hover:bg-[#009E7E] text-white rounded-xl font-bold text-sm shadow-md transition-colors cursor-pointer">➕ New Medicine</button>
+                  <button onclick="switchView('schedule')" class="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl font-bold text-sm transition-colors cursor-pointer">View Schedule</button>
+                </div>
+              </div>
+              <div class="absolute right-0 bottom-0 top-0 w-1/3 flex items-center justify-center opacity-15 pointer-events-none text-9xl select-none">💊</div>
+            </div>
+
+            <!-- Dashboard Timeline Quick Action Card -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 dark:bg-slate-900 dark:border-slate-850">
+              <div class="flex justify-between items-center mb-6">
+                <h3 class="font-bold text-lg text-slate-850 dark:text-white">Today's Medication Schedule</h3>
+                <span onclick="switchView('calendar')" class="text-xs text-[#0F4C81] dark:text-mint font-bold cursor-pointer underline">View Full Calendar</span>
+              </div>
+              <div class="space-y-4">
+                ${todayDoses.length === 0 
+                  ? `<p class="py-10 text-center text-slate-400 text-sm">No clinical medications mapped to today's active schedule.</p>`
+                  : todayDoses.map(dose => {
+                      let btnMarkup = '';
+                      let containerClass = '';
+                      let badge = '';
+
+                      if (dose.status === 'taken') {
+                        containerClass = 'bg-green-50/70 border-l-4 border-[#00B894] rounded-r-xl dark:bg-green-950/20';
+                        badge = `<span class="bg-[#00B894] text-white text-[10px] px-2 py-1 rounded-full">TAKEN</span> <span class="text-green-600 dark:text-green-400 font-bold ml-1">✓</span>`;
+                      } else if (dose.status === 'skipped') {
+                        containerClass = 'bg-gray-50/50 border-l-4 border-gray-250 rounded-r-xl dark:bg-slate-800/40 opacity-70';
+                        badge = `<span class="bg-gray-300 text-gray-700 text-[10px] px-2 py-1 rounded-full dark:bg-slate-700 dark:text-slate-300">SKIPPED</span>`;
+                      } else {
+                        const isOverdue = dose.status === 'overdue';
+                        containerClass = isOverdue 
+                          ? 'bg-red-50 border-l-4 border-red-500 rounded-r-xl dark:bg-red-950/20' 
+                          : 'bg-blue-50 border-l-4 border-[#0F4C81] rounded-r-xl dark:bg-blue-950/20';
+
+                        badge = isOverdue 
+                          ? `<span class="bg-red-500 text-white text-[10px] px-2 py-1 rounded-full animate-pulse">OVERDUE</span>` 
+                          : `<span class="bg-[#0f4c81] text-white text-[10px] px-2 py-1 rounded-full">DUE NOW</span>`;
+
+                        btnMarkup = `
+                          <div class="flex gap-1">
+                            <button onclick="logDoseAction('${dose.medId}', '${dose.slot}', 'taken')" class="px-3 py-1.5 bg-[#00B894] hover:bg-[#009E7E] text-white rounded-lg text-xs font-bold transition-all shadow-sm">Take</button>
+                            <button onclick="logDoseAction('${dose.medId}', '${dose.slot}', 'skipped')" class="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-350 dark:hover:bg-slate-700 rounded-lg text-xs font-bold transition-all">Skip</button>
+                          </div>
+                        `;
+                      }
+
+                      return `
+                        <div class="flex items-center p-4 ${containerClass} transition-all justify-between gap-4">
+                          <div class="flex items-center">
+                            <div class="w-10 h-10 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center mr-4 text-xl shadow-sm">
+                              ${dose.type === 'tablet' ? '💊' : dose.type === 'capsule' ? '💊' : dose.type === 'syrup' ? '🧪' : '💉'}
+                            </div>
+                            <div>
+                              <p class="font-bold text-[#1A202C] dark:text-white text-sm sm:text-base">${dose.name}</p>
+                              <p class="text-xs text-gray-400 font-medium">${dose.dosage} • Slot ${dose.timeLabel} • ${dose.meal === 'after' ? 'After food' : 'Before food'}</p>
+                            </div>
+                          </div>
+                          <div class="flex items-center space-x-2">
+                            ${badge}
+                            ${btnMarkup}
+                          </div>
+                        </div>
+                      `;
+                    }).join('')
+                }
+              </div>
+            </div>
+          </div>
+
+          <!-- ColumnRight -->
+          <div class="lg:col-span-4 flex flex-col space-y-6">
+            <!-- Adherence Meter Card (Bar Chart) -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 dark:bg-slate-900 dark:border-slate-850">
+              <h3 class="font-bold text-sm mb-4 uppercase tracking-wider text-slate-400">Adherence Progression</h3>
+              <div class="space-y-4">
+                <div>
+                  <div class="flex justify-between text-xs font-bold mb-1">
+                    <span class="text-slate-400">WEEKLY SCORE</span>
+                    <span id="weekly-score-pct" class="text-primary dark:text-mint">0%</span>
+                  </div>
+                  <!-- CSS progress bar -->
+                  <div class="w-full bg-gray-100 h-2 mt-2 rounded-full overflow-hidden dark:bg-slate-800">
+                    <div id="weekly-bar" class="bg-[#00B894] h-full rounded-full dark:bg-mint" style="width: 0%"></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div class="flex justify-between text-xs font-bold mb-1">
+                    <span class="text-slate-400">MONTHLY COMPLIANCE</span>
+                    <span id="monthly-score-pct" class="text-[#0F4C81] dark:text-slate-300">0%</span>
+                  </div>
+                  <div class="w-full bg-gray-100 h-2 mt-2 rounded-full overflow-hidden dark:bg-slate-800">
+                    <div id="monthly-bar" class="bg-[#0F4C81] h-full rounded-full" style="width: 0%"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Pharmacy finder block matching styles -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 dark:bg-slate-900 dark:border-slate-850 flex flex-col justify-between">
+              <h3 class="font-bold text-sm mb-4 flex items-center"><span class="mr-2">🏥</span> Nearest Pharmacy</h3>
+              <div class="w-full h-24 bg-gray-200 dark:bg-slate-800 rounded-xl mb-4 relative overflow-hidden">
+                <div class="absolute inset-0 opacity-20 bg-[radial-gradient(#0F4C81_1px,transparent_1px)] [background-size:10px_10px]"></div>
+                <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-2xl">📍</div>
+              </div>
+              <div>
+                <p class="font-bold text-sm">OSM Health Finder</p>
+                <p class="text-[11px] text-gray-500">Query direct overpass coordinates instantly.</p>
+                <button onclick="switchView('locator')" class="w-full mt-4 py-2 border border-[#0F4C81] text-[#0F4C81] dark:border-mint dark:text-mint text-xs font-bold rounded-lg hover:bg-[#0F4C81] hover:text-white dark:hover:bg-mint dark:hover:text-slate-950 transition-all cursor-pointer">Find Nearby Clinics</button>
+              </div>
+            </div>
+
+            <!-- Health Tip Card inside dashboard -->
+            <div class="bg-[#00B894] rounded-2xl p-6 shadow-md text-white">
+              <h3 class="font-bold text-xs uppercase tracking-widest opacity-80 mb-2">Health Advice</h3>
+              <p class="text-sm leading-relaxed italic">"${randomTip}"</p>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderAdherenceChart() {
+      // Calculate scores
+      const today = new Date();
+      
+      // Weekly denominator calculations
+      let weekTotal = 0;
+      let weekTaken = 0;
+      for (let i = 0; i < 7; i++) {
+        const d = new Date();
+        d.setDate(today.getDate() - d.getDay() + i); // Sun to Sat
+        const dStr = formatLocalDate(d);
+
+        AppState.medicines.forEach(med => {
+          if (dStr >= med.startDate && dStr <= med.endDate) {
+            med.slots.forEach(slot => {
+              weekTotal++;
+              if (AppState.dailyLogs[dStr]?.[`${med.id}_${slot}`]?.status === 'taken') {
+                weekTaken++;
+              }
+            });
+          }
+        });
+      }
+
+      const weekPct = weekTotal > 0 ? Math.round((weekTaken / weekTotal) * 100) : 100;
+      document.getElementById('weekly-score-pct').innerText = `${weekPct}%`;
+      document.getElementById('weekly-bar').style.width = `${weekPct}%`;
+
+      // Monthly denominator calculations
+      let monthTotal = 0;
+      let monthTaken = 0;
+      const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+      for (let i = 1; i <= daysInMonth; i++) {
+        const dStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+        
+        AppState.medicines.forEach(med => {
+          if (dStr >= med.startDate && dStr <= med.endDate) {
+            med.slots.forEach(slot => {
+              monthTotal++;
+              if (AppState.dailyLogs[dStr]?.[`${med.id}_${slot}`]?.status === 'taken') {
+                monthTaken++;
+              }
+            });
+          }
+        });
+      }
+
+      const monthPct = monthTotal > 0 ? Math.round((monthTaken / monthTotal) * 100) : 100;
+      document.getElementById('monthly-score-pct').innerText = `${monthPct}%`;
+      document.getElementById('monthly-bar').style.width = `${monthPct}%`;
+    }
+
+
+    // 2. MEDICINES INVENTORY VIEW CODE
+    function buildMedicinesViewHTML() {
+      const searchVal = (document.getElementById('med-search') ? document.getElementById('med-search').value : '').toLowerCase();
+      const filterVal = (document.getElementById('med-filter') ? document.getElementById('med-filter').value : 'all');
+
+      const filtered = AppState.medicines.filter(med => {
+        const matchesSearch = med.name.toLowerCase().includes(searchVal) || med.notes.toLowerCase().includes(searchVal);
+        const matchesCategory = filterVal === 'all' || med.type === filterVal;
+        return matchesSearch && matchesCategory;
+      });
+
+      return `
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div class="flex items-center gap-3 flex-1">
+            <input type="text" id="med-search" oninput="renderActiveView()" placeholder="Search active medicine..." value="${searchVal}" class="px-4 py-2.5 bg-white border border-slate-200 dark:bg-slate-900 dark:border-slate-800 rounded-xl max-w-sm w-full text-sm outline-none focus:ring-2 focus:ring-[#00B894]" />
+            <select id="med-filter" onchange="renderActiveView()" class="px-3.5 py-2.5 bg-white border border-slate-200 dark:bg-slate-900 dark:border-slate-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#00B894]">
+              <option value="all" ${filterVal === 'all' ? 'selected' : ''}>All Types</option>
+              <option value="tablet" ${filterVal === 'tablet' ? 'selected' : ''}>Tablets</option>
+              <option value="capsule" ${filterVal === 'capsule' ? 'selected' : ''}>Capsules</option>
+              <option value="syrup" ${filterVal === 'syrup' ? 'selected' : ''}>Syrups</option>
+              <option value="injection" ${filterVal === 'injection' ? 'selected' : ''}>Injections</option>
+            </select>
+          </div>
+          <button onclick="openAddModal()" class="px-5 py-2.5 bg-[#00B894] hover:bg-[#009E7E] text-white font-bold rounded-xl text-xs sm:text-sm shadow-md transition-all cursor-pointer">➕ New Medicine</button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          ${filtered.length === 0 
+            ? `<div class="col-span-full bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 rounded-2xl p-12 text-center text-slate-400">No matching pills found in inventory drawer.</div>`
+            : filtered.map(med => {
+                const datesLabel = `Period: ${med.startDate} to ${med.endDate}`;
+                return `
+                  <div class="bg-white border border-gray-100 rounded-2xl p-6 dark:bg-slate-900 dark:border-slate-800 shadow-sm hover:shadow-md transition-all relative flex flex-col justify-between">
+                    <div class="space-y-4">
+                      <div class="flex justify-between items-start">
+                        <div class="w-12 h-12 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-2xl shadow-sm border border-slate-100/50">
+                          ${med.type === 'tablet' ? '💊' : med.type === 'capsule' ? '💊' : med.type === 'syrup' ? '🧪' : '💉'}
+                        </div>
+                        <div class="flex gap-1.5">
+                          <button onclick="openEditMed('${med.id}')" class="p-2 text-[#0F4C81] dark:text-mint hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl text-xs font-semibold" title="Edit Roster">✏️</button>
+                          <button onclick="deleteMedication('${med.id}')" class="p-2 text-rose-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl text-xs font-semibold" title="Delete Roster">🗑️</button>
+                        </div>
+                      </div>
+                      
+                      <div class="space-y-1">
+                        <h4 class="font-display font-semibold text-lg text-slate-800 dark:text-slate-100 mb-1">${med.name}</h4>
+                        <span class="text-[10px] text-white bg-[#0F4C81] dark:bg-slate-850 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">DOSE: ${med.dosage}</span>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 leading-normal pt-2 italic">${med.notes || 'No doctor instructions provided.'}</p>
+                      </div>
+                    </div>
+
+                    <div class="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800/40 space-y-2">
+                      <div class="flex justify-between text-xs">
+                        <span class="text-slate-400 font-medium">FREQUENCY:</span>
+                        <span class="font-semibold text-slate-600 dark:text-slate-350 capitalize">${med.frequency} (${med.slots.join(', ')})</span>
+                      </div>
+                      <div class="flex justify-between text-xs">
+                        <span class="text-slate-400 font-medium">MEAL RELATION:</span>
+                        <span class="font-semibold text-[#00B894] dark:text-mint capitalize">${med.meal} meal</span>
+                      </div>
+                      <p class="text-[10px] text-slate-400 text-right mt-1.5 font-mono">${datesLabel}</p>
+                    </div>
+                  </div>
+                `;
+              }).join('')
+          }
+        </div>
+      `;
+    }
+
+    function openAddModal() {
+      document.getElementById('med-modal-title').innerText = "Add Medication Block";
+      document.getElementById('med-form-id').value = "";
+      document.getElementById('med-name').value = "";
+      document.getElementById('med-dosage').value = "";
+      document.getElementById('med-frequency').value = "once";
+      document.getElementById('med-meal').value = "after";
+      document.getElementById('med-start').value = formatLocalDate(new Date());
+      document.getElementById('med-end').value = formatLocalDate(new Date(Date.now() + 7 * 86400000));
+      document.getElementById('med-notes').value = "";
+      
+      // Reset checkboxes
+      document.getElementById('slot-morning').checked = true;
+      document.getElementById('slot-afternoon').checked = false;
+      document.getElementById('slot-evening').checked = false;
+      document.getElementById('slot-night').checked = false;
+
+      document.getElementById('med-modal').classList.remove('hidden');
+    }
+
+    function closeMedModal() {
+      document.getElementById('med-modal').classList.add('hidden');
+    }
+
+    function handleFrequencyChange() {
+      const freq = document.getElementById('med-frequency').value;
+      const morningInput = document.getElementById('slot-morning');
+      const afternoonInput = document.getElementById('slot-afternoon');
+      const eveningInput = document.getElementById('slot-evening');
+      const nightInput = document.getElementById('slot-night');
+
+      if (freq === 'once') {
+        morningInput.checked = true; afternoonInput.checked = false; eveningInput.checked = false; nightInput.checked = false;
+      } else if (freq === 'twice') {
+        morningInput.checked = true; afternoonInput.checked = false; eveningInput.checked = false; nightInput.checked = true;
+      } else if (freq === 'thrice') {
+        morningInput.checked = true; afternoonInput.checked = true; eveningInput.checked = false; nightInput.checked = true;
+      }
+    }
+
+    function handleMedSubmit(e) {
+      e.preventDefault();
+      const id = document.getElementById('med-form-id').value;
+      const name = document.getElementById('med-name').value.trim();
+      const dosage = document.getElementById('med-dosage').value.trim();
+      const type = document.querySelector('input[name="med-type"]:checked').value;
+      const frequency = document.getElementById('med-frequency').value;
+      const meal = document.getElementById('med-meal').value;
+      const startDate = document.getElementById('med-start').value;
+      const endDate = document.getElementById('med-end').value;
+      const notes = document.getElementById('med-notes').value.trim();
+
+      // Gather intervals
+      const slots = [];
+      if (document.getElementById('slot-morning').checked) slots.push('morning');
+      if (document.getElementById('slot-afternoon').checked) slots.push('afternoon');
+      if (document.getElementById('slot-evening').checked) slots.push('evening');
+      if (document.getElementById('slot-night').checked) slots.push('night');
+
+      if (slots.length === 0) {
+        alert("Please set at least one daily active hour slot!");
+        return;
+      }
+
+      if (id) {
+        // Edit flow
+        const medIndex = AppState.medicines.findIndex(m => m.id === id);
+        if (medIndex > -1) {
+          AppState.medicines[medIndex] = { id, name, dosage, type, frequency, slots, startDate, endDate, meal, notes };
+          triggerToast(`${name} modified in logs successfully.`, 'info');
+        }
+      } else {
+        // New medication entry
+        const newMed = {
+          id: String(Date.now()),
+          name, dosage, type, frequency, slots, startDate, endDate, meal, notes
+        };
+        AppState.medicines.push(newMed);
+        triggerToast(`${name} added to inventory successfully.`, 'success');
+      }
+
+      saveAppState();
+      closeMedModal();
+      renderActiveView();
+      renderSidebar();
+    }
+
+    function openEditMed(medId) {
+      const med = AppState.medicines.find(m => m.id === medId);
+      if (!med) return;
+
+      document.getElementById('med-modal-title').innerText = "Edit Medication details";
+      document.getElementById('med-form-id').value = med.id;
+      document.getElementById('med-name').value = med.name;
+      document.getElementById('med-dosage').value = med.dosage;
+      document.getElementById('med-frequency').value = med.frequency;
+      document.getElementById('med-meal').value = med.meal;
+      document.getElementById('med-start').value = med.startDate;
+      document.getElementById('med-end').value = med.endDate;
+      document.getElementById('med-notes').value = med.notes;
+
+      // Select radios
+      const radios = document.querySelectorAll('input[name="med-type"]');
+      radios.forEach(r => {
+        r.checked = (r.value === med.type);
+      });
+
+      // Checkboxes
+      document.getElementById('slot-morning').checked = med.slots.includes('morning');
+      document.getElementById('slot-afternoon').checked = med.slots.includes('afternoon');
+      document.getElementById('slot-evening').checked = med.slots.includes('evening');
+      document.getElementById('slot-night').checked = med.slots.includes('night');
+
+      document.getElementById('med-modal').classList.remove('hidden');
+    }
+
+    function deleteMedication(id) {
+      if (confirm("Confirm removal of this medication. This clears it from inventory records.")) {
+        AppState.medicines = AppState.medicines.filter(m => m.id !== id);
+        triggerToast("Medication deleted from roster.", 'warning');
+        saveAppState();
+        renderActiveView();
+        renderSidebar();
+      }
+    }
+
+
+    // 3. DAILY TIMELINE / SCHEDULE VIEW CODE
+    function buildScheduleViewHTML() {
+      const todayDoses = getTodayDoses();
+      const slotsArray = ['morning', 'afternoon', 'evening', 'night'];
+
+      return `
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 dark:bg-slate-900 dark:border-slate-850">
+          <div class="mb-6 border-b border-gray-100 dark:border-slate-800 pb-4">
+            <h3 class="font-bold text-lg text-slate-855 dark:text-white">Active Clinical Timeline</h3>
+            <p class="text-xs text-gray-400 font-medium">Scheduled prescription intervals for today's physical roster.</p>
+          </div>
+
+          <div class="relative pl-6 sm:pl-8 border-l-2 border-gray-200 dark:border-slate-800 space-y-8">
+            ${slotsArray.map(slotKey => {
+              const dosesForThisSlot = todayDoses.filter(d => d.slot === slotKey);
+              
+              return `
+                <div class="relative">
+                  <!-- Bullet with inner ring alignment -->
+                  <div class="absolute -left-[31px] sm:-left-[39px] top-1 w-4 h-4 rounded-full border-2 border-white bg-[#00B894] dark:border-slate-950 flex items-center justify-center shadow-sm"></div>
+                  
+                  <div class="space-y-3">
+                    <div class="flex items-center gap-2">
+                      <span class="font-display font-bold text-base capitalize text-[#0F4C81] dark:text-mint">${slotKey} Slot</span>
+                      <span class="font-mono text-xs bg-slate-50 text-[#0F4C81] dark:bg-slate-800 px-2.5 py-0.5 rounded-lg border border-slate-100 dark:border-none">${timeSlots[slotKey]}</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      ${dosesForThisSlot.length === 0 
+                        ? `<p class="text-xs text-slate-400 py-1.5 italic">No medical treatments scheduled in this time range.</p>`
+                        : dosesForThisSlot.map(dose => {
+                            let statusBtn = '';
+                            let badgeStyle = '';
+
+                            if (dose.status === 'taken') {
+                              badgeStyle = 'bg-[#00B894] text-white';
+                              statusBtn = `<span class="text-xs font-bold text-[#00B894]">Taken ✓</span>`;
+                            } else if (dose.status === 'skipped') {
+                              badgeStyle = 'bg-gray-200 text-gray-700 dark:bg-slate-850 dark:text-slate-400';
+                              statusBtn = `<span class="text-xs font-bold text-gray-400">Skipped ✕</span>`;
+                            } else {
+                              const isOverdue = dose.status === 'overdue';
+                              badgeStyle = isOverdue 
+                                ? 'bg-red-500 text-white animate-pulse' 
+                                : 'bg-[#0F4C81] text-white';
+
+                              statusBtn = `
+                                <div class="flex gap-1.5">
+                                  <button onclick="logDoseAction('${dose.medId}', '${dose.slot}', 'taken')" class="px-3 py-1.5 bg-[#00B894] hover:bg-[#009E7E] text-white rounded-lg text-xs font-bold transition-all shadow-sm">Take</button>
+                                  <button onclick="logDoseAction('${dose.medId}', '${dose.slot}', 'skipped')" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-350 dark:hover:bg-slate-700 rounded-lg text-xs font-bold transition-all">Skip</button>
+                                </div>
+                              `;
+                            }
+
+                            return `
+                              <div class="p-4 bg-slate-50 dark:bg-slate-850/60 border border-gray-100 dark:border-slate-800 rounded-xl flex flex-col justify-between hover:shadow-sm transition-all gap-4">
+                                <div class="flex items-start justify-between">
+                                  <div>
+                                    <h4 class="font-bold text-sm text-[#1A202C] dark:text-slate-100">${dose.name}</h3>
+                                    <p class="text-xs text-slate-400 font-medium">${dose.dosage} • ${dose.meal === 'after' ? 'After food' : 'Before food'}</p>
+                                    <p class="text-[11px] text-slate-500 mt-1 italic">${dose.notes || ''}</p>
+                                  </div>
+                                  <span class="text-[10px] font-bold px-2 py-0.5 rounded-full capitalize tracking-wider ${badgeStyle}">${dose.status}</span>
+                                </div>
+                                <div class="flex justify-end items-center pt-2.5 border-t border-slate-100 dark:border-slate-800/40">
+                                  ${statusBtn}
+                                </div>
+                              </div>
+                            `;
+                          }).join('')
+                      }
+                    </div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+
+    // 4. ADHERENCE CALENDAR VIEW CODE
+    let currentCalMonth = new Date().getMonth();
+    let currentCalYear = new Date().getFullYear();
+
+    function buildCalendarViewHTML() {
+      return `
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <!-- Left Calendar block -->
+          <div class="lg:col-span-8 bg-white border border-slate-100 rounded-3xl p-6 dark:bg-slate-900 dark:border-slate-800 shadow-sm">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+              <div>
+                <h3 class="font-display font-bold text-xl">Compliance Logs</h3>
+                <p class="text-xs text-slate-400 font-medium">Click on any date to manage past clinical records directly.</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="navigateCalendar(-1)" class="p-2 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">◀</button>
+                <span id="calendar-month-indicator" class="font-display font-bold text-base px-3 min-w-[120px] text-center">Loading...</span>
+                <button onclick="navigateCalendar(1)" class="p-2 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">▶</button>
+              </div>
+            </div>
+
+            <!-- Calendar Display Grid -->
+            <div class="grid grid-cols-7 gap-2 text-center text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
+              <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+            </div>
+            <div id="calendar-days-grid" class="grid grid-cols-7 gap-2 min-h-[300px]"></div>
+          </div>
+
+          <!-- Adherence Stats panel -->
+          <div class="lg:col-span-4 bg-white border border-slate-100 rounded-3xl p-6 dark:bg-slate-900 dark:border-slate-800 space-y-6">
+            <h3 class="font-display font-bold text-lg">Metrics Dashboard</h3>
+            
+            <div class="p-4 bg-slate-50 border border-slate-100 rounded-2xl dark:bg-slate-800/40 dark:border-slate-800 text-center space-y-4">
+              <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">Clinical Compliance Ratio</p>
+              
+              <!-- Circular Progress Gauge in pure SVG -->
+              <div class="inline-flex items-center justify-center relative">
+                <svg class="w-32 h-32 transform -rotate-90">
+                  <circle cx="64" cy="64" r="54" stroke="currentColor" stroke-width="8" fill="transparent" class="text-slate-100 dark:text-slate-800"></circle>
+                  <circle cx="64" cy="64" r="54" stroke="currentColor" stroke-width="8" fill="transparent" stroke-dasharray="339.29" stroke-dashoffset="${339.29 - (339.29 * getAdherencePercentage()) / 100}" class="text-primary dark:text-mint transition-all duration-500" stroke-linecap="round"></circle>
+                </svg>
+                <span class="absolute text-xl font-bold font-display" id="cal-gauge-pct">0%</span>
+              </div>
+              <p class="text-[11px] text-slate-500 leading-normal">Overall aggregate calculation matching all successfully marked 'taken' medicines vs planned requirements.</p>
+            </div>
+
+            <div class="space-y-3">
+              <button onclick="exportClinicalCSV()" class="w-full py-3 bg-primary text-white font-bold rounded-xl text-xs hover:bg-primary-light transition-all flex items-center justify-center gap-2 shadow-sm shadow-primary/10 cursor-pointer">
+                📦 Extract Logs to CSV Report
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function navigateCalendar(direction) {
+      currentCalMonth += direction;
+      if (currentCalMonth < 0) {
+        currentCalMonth = 11;
+        currentCalYear--;
+      } else if (currentCalMonth > 11) {
+        currentCalMonth = 0;
+        currentCalYear++;
+      }
+      renderAdherenceCalendar();
+    }
+
+    function getAdherencePercentage() {
+      let taken = 0;
+      let total = 0;
+
+      Object.keys(AppState.dailyLogs).forEach(dateStr => {
+        Object.keys(AppState.dailyLogs[dateStr]).forEach(key => {
+          total++;
+          if (AppState.dailyLogs[dateStr][key].status === 'taken') taken++;
+        });
+      });
+
+      return total > 0 ? Math.round((taken / total) * 100) : 100;
+    }
+
+    function renderAdherenceCalendar() {
+      const parent = document.getElementById('calendar-days-grid');
+      const label = document.getElementById('calendar-month-indicator');
+      if (!parent) return;
+
+      const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+      label.innerText = `${months[currentCalMonth]} ${currentCalYear}`;
+
+      parent.innerHTML = '';
+
+      // First day position
+      const firstDay = new Date(currentCalYear, currentCalMonth, 1).getDay();
+      const numDays = new Date(currentCalYear, currentCalMonth + 1, 0).getDate();
+
+      // Days from previous month (empty spaces)
+      for (let i = 0; i < firstDay; i++) {
+        const spacer = document.createElement('div');
+        spacer.className = "p-2 bg-slate-50/20 dark:bg-slate-950/20 rounded-xl";
+        parent.appendChild(spacer);
+      }
+
+      // Populate calendar days
+      for (let day = 1; day <= numDays; day++) {
+        const dStr = `${currentCalYear}-${String(currentCalMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const container = document.createElement('button');
+        container.type = "button";
+        container.onclick = () => showDailyDetailModal(dStr);
+        container.className = "p-3 bg-slate-50 hover:bg-slate-100 rounded-xl flex flex-col justify-between items-center min-h-[58px] transition-all relative cursor-pointer dark:bg-slate-800/40 dark:hover:bg-slate-800 border border-slate-100/40 dark:border-slate-800/40";
+
+        const labelSpan = document.createElement('span');
+        labelSpan.innerText = day;
+        labelSpan.className = "text-xs font-semibold";
+        container.appendChild(labelSpan);
+
+        // Calculate medical task dots
+        const dayTasks = [];
+        AppState.medicines.forEach(med => {
+          if (dStr >= med.startDate && dStr <= med.endDate) {
+            med.slots.forEach(slot => {
+              const logEntry = AppState.dailyLogs[dStr]?.[`${med.id}_${slot}`];
+              dayTasks.push(logEntry ? logEntry.status : 'pending');
+            });
+          }
+        });
+
+        if (dayTasks.length > 0) {
+          const dotWrapper = document.createElement('div');
+          dotWrapper.className = "flex gap-1 mt-1 justify-center flex-wrap";
+          
+          dayTasks.slice(0, 3).forEach(task => {
+            const dot = document.createElement('span');
+            dot.className = `w-1.5 h-1.5 rounded-full ${
+              task === 'taken' ? 'bg-emerald-500' : task === 'skipped' ? 'bg-amber-400' : 'bg-red-400'
+            }`;
+            dotWrapper.appendChild(dot);
+          });
+          container.appendChild(dotWrapper);
+        }
+
+        parent.appendChild(container);
+
+        // Update overall circular compliance gauge
+        const complianceVal = getAdherencePercentage();
+        const gaugeVal = document.getElementById('cal-gauge-pct');
+        if (gaugeVal) gaugeVal.innerText = `${complianceVal}%`;
+      }
+    }
+
+    function showDailyDetailModal(dStr) {
+      document.getElementById('day-modal-date').innerText = new Date(dStr + "T00:00:00").toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      const main = document.getElementById('day-modal-content');
+
+      const activeMeds = AppState.medicines.filter(med => {
+        return dStr >= med.startDate && dStr <= med.endDate;
+      });
+
+      if (activeMeds.length === 0) {
+        main.innerHTML = `<p class="text-sm text-slate-400 py-4 text-center">No medications scheduled for this day.</p>`;
+      } else {
+        main.innerHTML = activeMeds.map(med => {
+          return med.slots.map(slot => {
+            const logEntry = AppState.dailyLogs[dStr]?.[`${med.id}_${slot}`];
+            const currentStatus = logEntry ? logEntry.status : 'pending';
+            
+            return `
+              <div class="p-4 border border-slate-100 rounded-2xl bg-slate-50 dark:bg-slate-800/40 dark:border-slate-850 space-y-3">
+                <div class="flex justify-between items-start gap-4">
+                  <div>
+                    <h4 class="font-bold text-sm truncate">${med.name} (${med.dosage})</h4>
+                    <p class="text-[10px] text-slate-400">Scheduled: ${slot.toUpperCase()} • ${med.meal} meal</p>
+                  </div>
+                  <span class="text-[11px] font-bold px-2 py-0.5 rounded-full capitalize ${
+                    currentStatus === 'taken' ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/10' : currentStatus === 'skipped' ? 'bg-amber-100 text-amber-600 dark:bg-amber-500/10' : 'bg-slate-150 text-slate-500 dark:bg-slate-800'
+                  }">${currentStatus}</span>
+                </div>
+                <div class="flex gap-1.5">
+                  <button onclick="logDoseAction('${med.id}', '${slot}', 'taken', '${dStr}'); showDailyDetailModal('${dStr}')" class="px-2.5 py-1 bg-emerald-500 text-white font-semibold text-xs rounded-lg cursor-pointer">Take</button>
+                  <button onclick="logDoseAction('${med.id}', '${slot}', 'skipped', '${dStr}'); showDailyDetailModal('${dStr}')" class="px-2.5 py-1 bg-amber-400 text-slate-900 font-semibold text-xs rounded-lg cursor-pointer">Skip</button>
+                  <button onclick="clearSingleDailyLog('${med.id}', '${slot}', '${dStr}'); showDailyDetailModal('${dStr}')" class="px-2.5 py-1 bg-slate-200 hover:bg-slate-350 text-slate-700 dark:bg-slate-700 dark:text-white font-semibold text-xs rounded-lg cursor-pointer">Clear</button>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }).join('');
+      }
+
+      document.getElementById('day-modal').classList.remove('hidden');
+    }
+
+    function clearSingleDailyLog(medId, slot, dateStr) {
+      if (AppState.dailyLogs[dateStr]) {
+        delete AppState.dailyLogs[dateStr][`${medId}_${slot}`];
+        if (Object.keys(AppState.dailyLogs[dateStr]).length === 0) {
+          delete AppState.dailyLogs[dateStr];
+        }
+        triggerToast("Daily record reset.", "info");
+        saveAppState();
+        renderAdherenceCalendar();
+        renderActiveView();
+      }
+    }
+
+    function closeDayModal() {
+      document.getElementById('day-modal').classList.add('hidden');
+    }
+
+    function exportClinicalCSV() {
+      const rows = [
+        ["Date", "Medication Name", "Strength", "Time Slot", "Status", "Date Updated UTC"]
+      ];
+
+      Object.keys(AppState.dailyLogs).forEach(dateStr => {
+        Object.keys(AppState.dailyLogs[dateStr]).forEach(key => {
+          const [medId, slot] = key.split('_');
+          const med = AppState.medicines.find(m => m.id === medId);
+          const name = med ? med.name : 'Unknown Medicine';
+          const dosage = med ? med.dosage : 'N/A';
+          const log = AppState.dailyLogs[dateStr][key];
+
+          rows.push([dateStr, name, dosage, slot, log.status, log.updatedAt || '']);
+        });
+      });
+
+      const csvContent = "data:text/csv;charset=utf-8," 
+        + rows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
+
+      const link = document.createElement("a");
+      link.setAttribute("href", encodeURI(csvContent));
+      link.setAttribute("download", `CareMeds_Report_${formatLocalDate(new Date())}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      triggerToast("CSV File report generated.", "info");
+    }
+
+
+    // 5. PHARMACY LOCATOR VIEW CODE
+    let leafletMap = null;
+    let pharmacyListings = [];
+    let activeRadius = 5000; // default 5km
+    let currentCoords = { lat: 40.7128, lng: -74.0060 }; // Default Fallback NY coords
+    let userLocationMarker = null;
+    let mapMarkersGroup = [];
+
+    function buildLocatorViewHTML() {
+      return `
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in fade-in duration-300">
+          <!-- Mapping side -->
+          <div class="lg:col-span-8 flex flex-col gap-4">
+            <div class="bg-white rounded-2xl p-5 dark:bg-slate-900 dark:border-slate-850 shadow-sm border border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div class="w-full flex-1 min-w-0 font-sans">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Search radius slider</label>
+                <div class="flex items-center gap-3">
+                  <input type="range" id="radius-slider" min="1000" max="10000" step="1000" value="${activeRadius}" onchange="handleRadiusSliderChange()" class="w-full accent-[#00B894] dark:accent-mint cursor-pointer" />
+                  <span id="radius-val" class="font-mono text-sm font-bold min-w-[50px] text-[#0F4C81] dark:text-mint text-right">${activeRadius/1000}km</span>
+                </div>
+              </div>
+              <button onclick="requestGPSTracking()" class="w-full sm:w-auto px-5 py-3 bg-[#00B894] hover:bg-[#009E7E] text-white font-bold rounded-xl text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap shadow-md shadow-emerald-500/15">
+                🧭 Refresh Location GPS
+              </button>
+            </div>
+
+            <!-- Leaflet map container element with exact ResizeObserver compliance rules -->
+            <div class="bg-white rounded-2xl p-3 dark:bg-slate-900 dark:border-slate-850 shadow-sm border border-gray-100 relative overflow-hidden" style="height: 480px">
+              <div id="map" class="w-full h-full rounded-xl z-20"></div>
+              <div id="map-busy-spinner" class="absolute inset-0 bg-slate-900/40 z-30 flex items-center justify-center rounded-xl hidden">
+                <div class="p-6 bg-white rounded-2xl text-center space-y-2 dark:bg-slate-900 max-w-xs shadow-xl animate-in fade-in zoom-in-95">
+                  <div class="w-8 h-8 rounded-full border-4 border-[#0F4C81]/25 border-t-[#00B894] animate-spin mx-auto"></div>
+                  <span class="text-xs font-bold tracking-wider uppercase text-slate-400">Overpass OSM Query Active...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Listing Index Panel -->
+          <div class="lg:col-span-4 flex flex-col gap-4">
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 dark:bg-slate-900 dark:border-slate-850 flex flex-col justify-between max-h-[550px]">
+              <div>
+                <h3 class="font-bold text-lg mb-1 text-slate-850 dark:text-white">Located Pharmacies</h3>
+                <p class="text-xs text-slate-400 mb-4" id="locator-status-text">Ready to query Overpass API engine.</p>
+              </div>
+              <div id="pharmacy-scroll-list" class="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-thin">
+                <p class="text-center py-10 text-xs text-slate-400">Click GPS reload to locate nearest clinics.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function initLeafletMap() {
+      if (leafletMap !== null) {
+        leafletMap.invalidateSize();
+        return;
+      }
+
+      // Initialize map using light tiles CartoDB Positron for extremely beautiful clinical mapping visual aesthetic
+      leafletMap = L.map('map').setView([currentCoords.lat, currentCoords.lng], 14);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 20
+      }).addTo(leafletMap);
+
+      triggerGPSTraceFirstLoad();
+    }
+
+    function triggerGPSTraceFirstLoad() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            currentCoords.lat = pos.coords.latitude;
+            currentCoords.lng = pos.coords.longitude;
+            updateUserLocationMarkerOnMap();
+            fetchWebPharmaciesFromOverpass();
+          },
+          (err) => {
+            console.warn("GPS Tracking blocked/denied on first load. Using default New York fallback nodes.", err);
+            updateUserLocationMarkerOnMap();
+            fetchWebPharmaciesFromOverpass();
+          },
+          { timeout: 7000 }
+        );
+      } else {
+        updateUserLocationMarkerOnMap();
+        fetchWebPharmaciesFromOverpass();
+      }
+    }
+
+    function requestGPSTracking() {
+      if (navigator.geolocation) {
+        document.getElementById('map-busy-spinner').classList.remove('hidden');
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            currentCoords.lat = pos.coords.latitude;
+            currentCoords.lng = pos.coords.longitude;
+            updateUserLocationMarkerOnMap();
+            fetchWebPharmaciesFromOverpass();
+          },
+          (err) => {
+            document.getElementById('map-busy-spinner').classList.add('hidden');
+            alert("Geolocation was denied or timed out. Default coordinates shown on console.");
+            console.error(err);
+          }
+        );
+      } else {
+        alert("Geolocation API unavailable in this environment browser.");
+      }
+    }
+
+    function handleRadiusSliderChange() {
+      const slider = document.getElementById('radius-slider');
+      activeRadius = parseInt(slider.value);
+      document.getElementById('radius-val').innerText = `${activeRadius/1000}km`;
+      fetchWebPharmaciesFromOverpass();
+    }
+
+    function updateUserLocationMarkerOnMap() {
+      if (!leafletMap) return;
+
+      if (userLocationMarker) {
+        leafletMap.removeLayer(userLocationMarker);
+      }
+
+      const userIcon = L.divIcon({
+        html: `<div class="w-8 h-8 rounded-full bg-primary/20 border-4 border-primary flex items-center justify-center shadow-lg animate-pulse">
+                <div class="w-2 h-2 bg-indigo-200 rounded-full"></div>
+               </div>`,
+        className: 'custom-user-pin',
+        iconSize: [32, 32],
+        iconAnchor: [16, 16]
+      });
+
+      userLocationMarker = L.marker([currentCoords.lat, currentCoords.lng], { icon: userIcon }).addTo(leafletMap)
+        .bindPopup("<strong class='text-xs font-bold text-center flex gap-1 items-center justify-center p-1 font-sans'>📍 Your Current Location</strong>");
+
+      leafletMap.setView([currentCoords.lat, currentCoords.lng], 14);
+    }
+
+    async function fetchWebPharmaciesFromOverpass() {
+      if (!leafletMap) return;
+      document.getElementById('map-busy-spinner').classList.remove('hidden');
+
+      const query = `[out:json][timeout:25];node(around:${activeRadius},${currentCoords.lat},${currentCoords.lng})[amenity=pharmacy];out;`;
+      const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
+
+      try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("HTTP failure loading Overpass nodes.");
+        const data = await response.json();
+
+        pharmacyListings = [];
+        
+        // Remove prior markers
+        mapMarkersGroup.forEach(m => leafletMap.removeLayer(m));
+        mapMarkersGroup = [];
+
+        if (data.elements) {
+          data.elements.forEach(element => {
+            const distance = getHaversineDistance(currentCoords.lat, currentCoords.lng, element.lat, element.lon);
+            const address = [
+              element.tags['addr:street'] || '',
+              element.tags['addr:housenumber'] || '',
+              element.tags['addr:city'] || ''
+            ].filter(Boolean).join(' ') || 'Street address unavailable';
+
+            pharmacyListings.push({
+              id: element.id,
+              name: element.tags.name || 'Unnamed Community Pharmacy',
+              lat: element.lat,
+              lng: element.lon,
+              distance: distance,
+              address: address,
+              openingHours: element.tags.opening_hours || 'Contact local operator'
+            });
+          });
+        }
+
+        // Sort items nearest first
+        pharmacyListings.sort((a,b) => a.distance - b.distance);
+        renderPharmacyListHTML();
+        drawPharmacyPinsOnMap();
+        
+        document.getElementById('locator-status-text').innerText = `Found ${pharmacyListings.length} community clinics within ${activeRadius/1000}km`;
+      } catch (err) {
+        console.error("Overpass network lookup failed.", err);
+        triggerToast("Lookup failed. Check active connection to OSM server.", "danger");
+      } finally {
+        document.getElementById('map-busy-spinner').classList.add('hidden');
+      }
+    }
+
+    // Mathematical Haversine Distance computation
+    function getHaversineDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371; // Earth's Radius km
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = 
+        Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+        Math.sin(dLon/2) * Math.sin(dLon/2);
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+
+    function renderPharmacyListHTML() {
+      const parent = document.getElementById('pharmacy-scroll-list');
+      if (!parent) return;
+
+      if (pharmacyListings.length === 0) {
+        parent.innerHTML = `<p class="text-center py-10 text-xs text-slate-400">No medical clinics found within active radius index scope.</p>`;
+        return;
+      }
+
+      parent.innerHTML = pharmacyListings.map(p => {
+        return `
+          <div class="p-4 bg-slate-50 border border-slate-100 rounded-2xl dark:bg-slate-800/40 dark:border-slate-800 flex items-start justify-between gap-3 gap-y-3 cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-800 hover:shadow-sm transition-all" onclick="focusPharmacyMarker(${p.lat}, ${p.lng}, ${p.id})">
+            <div>
+              <h4 class="font-bold text-xs line-clamp-1 text-slate-800 dark:text-slate-100">${p.name}</h4>
+              <p class="text-[11px] text-slate-400 mt-0.5 line-clamp-1">${p.address}</p>
+              <p class="text-[10px] text-primary dark:text-mint mt-1 font-mono font-bold">${p.distance.toFixed(2)} km away</p>
+            </div>
+            <a href="https://www.google.com/maps/dir/?api=1&origin=${currentCoords.lat},${currentCoords.lng}&destination=${p.lat},${p.lng}" target="_blank" onclick="event.stopPropagation()" class="px-2.5 py-1.5 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-lg text-[10px] font-semibold transition-all">Directions</a>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function drawPharmacyPinsOnMap() {
+      if (!leafletMap) return;
+
+      const pharIcon = L.divIcon({
+        html: `<div class="w-9 h-9 rounded-full bg-emerald-600 border-2 border-white flex items-center justify-center shadow-lg text-white font-bold text-center hover:scale-115 transition-transform">🏥</div>`,
+        className: 'custom-pharmacy-pin',
+        iconSize: [36, 36],
+        iconAnchor: [18, 18]
+      });
+
+      pharmacyListings.forEach(p => {
+        const marker = L.marker([p.lat, p.lng], { icon: pharIcon }).addTo(leafletMap);
+        
+        const popupContent = `
+          <div class="font-sans space-y-2 p-1.5 min-w-[200px]">
+            <h4 class="font-bold text-sm text-slate-800 line-clamp-2">${p.name}</h4>
+            <p class="text-xs text-slate-400 leading-normal">${p.address}</p>
+            <p class="text-xs font-semibold text-emerald-600">Hours: ${p.openingHours}</p>
+            <p class="text-xs font-mono font-bold text-slate-400 flex justify-between">Distance: <span>${p.distance.toFixed(2)}km</span></p>
+            <a href="https://www.google.com/maps/dir/?api=1&origin=${currentCoords.lat},${currentCoords.lng}&destination=${p.lat},${p.lng}" target="_blank" class="block w-full py-2 bg-primary text-white text-center text-xs font-semibold rounded-lg hover:bg-primary-dark transition-colors mt-2">Get Directions</a>
+          </div>
+        `;
+        
+        marker.bindPopup(popupContent);
+        marker._overpassId = p.id;
+        mapMarkersGroup.push(marker);
+      });
+    }
+
+    function focusPharmacyMarker(lat, lng, id) {
+      if (!leafletMap) return;
+      leafletMap.setView([lat, lng], 17);
+      
+      const targetMarker = mapMarkersGroup.find(m => m._overpassId === id);
+      if (targetMarker) {
+        targetMarker.openPopup();
+      }
+    }
+
+
+    // 6. PATIENT PROFILE VIEW CODE
+    function buildProfileViewHTML() {
+      return `
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 dark:bg-slate-900 dark:border-slate-850 animate-in fade-in duration-300">
+          <div class="mb-6 border-b border-gray-100 dark:border-slate-800 pb-4">
+            <h3 class="font-bold text-lg text-slate-855 dark:text-white">Patient Profile Registry</h3>
+            <p class="text-xs text-gray-400 font-medium">Critical treatment variables, allergy index, and emergency liaison records.</p>
+          </div>
+
+          <form onsubmit="handleProfileSubmit(event)" class="space-y-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">First/Last Name</label>
+                <input type="text" id="prof-name" required value="${AppState.profile.name || ''}" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:bg-slate-800 dark:border-slate-700 outline-none focus:ring-2 focus:ring-[#00B894]" />
+              </div>
+              <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Age</label>
+                <input type="number" id="prof-age" required value="${AppState.profile.age || ''}" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:bg-slate-800 dark:border-slate-700 outline-none focus:ring-2 focus:ring-[#00B894]" />
+              </div>
+              <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Blood Group Type</label>
+                <select id="prof-blood" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:bg-slate-800 dark:border-slate-700 outline-none focus:ring-2 focus:ring-[#00B894]">
+                  <option value="A+" ${AppState.profile.bloodGroup === 'A+' ? 'selected' : ''}>A+</option>
+                  <option value="A-" ${AppState.profile.bloodGroup === 'A-' ? 'selected' : ''}>A-</option>
+                  <option value="B+" ${AppState.profile.bloodGroup === 'B+' ? 'selected' : ''}>B+</option>
+                  <option value="B-" ${AppState.profile.bloodGroup === 'B-' ? 'selected' : ''}>B-</option>
+                  <option value="AB+" ${AppState.profile.bloodGroup === 'AB+' ? 'selected' : ''}>AB+</option>
+                  <option value="AB-" ${AppState.profile.bloodGroup === 'AB-' ? 'selected' : ''}>AB-</option>
+                  <option value="O+" ${AppState.profile.bloodGroup === 'O+' ? 'selected' : ''}>O+</option>
+                  <option value="O-" ${AppState.profile.bloodGroup === 'O-' ? 'selected' : ''}>O-</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Known Allergies</label>
+                <input type="text" id="prof-allergies" value="${AppState.profile.allergies || ''}" placeholder="e.g. Sulfa, Peanuts" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:bg-slate-800 dark:border-slate-700 outline-none focus:ring-2 focus:ring-[#00B894]" />
+              </div>
+              <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Existing Medical Conditions</label>
+                <input type="text" id="prof-conditions" value="${AppState.profile.conditions || ''}" placeholder="e.g. Hypertension, Diabetes" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:bg-slate-800 dark:border-slate-700 outline-none focus:ring-2 focus:ring-[#00B894]" />
+              </div>
+            </div>
+
+            <div class="p-5 bg-slate-50 border border-gray-100 dark:bg-slate-850/60 rounded-xl dark:border-slate-800 space-y-4">
+              <h4 class="font-bold text-sm text-slate-700 dark:text-slate-300">🚨 Primary Emergency Liaison Contact</h4>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div>
+                  <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Emergency Contact Representative</label>
+                  <input type="text" id="prof-contact-name" value="${AppState.profile.emergencyContactName || ''}" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl dark:bg-slate-800 dark:border-slate-700 outline-none focus:ring-2 focus:ring-[#00B894]" />
+                </div>
+                <div>
+                  <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Emergency Verified Phone</label>
+                  <input type="tel" id="prof-contact-phone" value="${AppState.profile.emergencyContactPhone || ''}" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl dark:bg-slate-800 dark:border-slate-700 outline-none focus:ring-2 focus:ring-[#00B894]" />
+                </div>
+              </div>
+            </div>
+
+            <div class="flex justify-end pt-3">
+              <button type="submit" class="px-6 py-3 bg-[#00B894] hover:bg-[#009E7E] text-white rounded-xl font-bold transition-all cursor-pointer shadow-md shadow-emerald-500/15">
+                Update Patient Profile
+              </button>
+            </div>
+          </form>
+        </div>
+      `;
+    }
+
+    function handleProfileSubmit(e) {
+      e.preventDefault();
+      AppState.profile.name = document.getElementById('prof-name').value.trim();
+      AppState.profile.age = document.getElementById('prof-age').value;
+      AppState.profile.bloodGroup = document.getElementById('prof-blood').value;
+      AppState.profile.allergies = document.getElementById('prof-allergies').value.trim();
+      AppState.profile.conditions = document.getElementById('prof-conditions').value.trim();
+      AppState.profile.emergencyContactName = document.getElementById('prof-contact-name').value.trim();
+      AppState.profile.emergencyContactPhone = document.getElementById('prof-contact-phone').value.trim();
+
+      triggerToast("Patient Profile details updated safely.", 'success');
+      saveAppState();
+      renderActiveView();
+      renderSidebar();
+    }
+
+
+    // 7. ALERT NOTIFICATIONS SECTION
+    function getUnreadNotificationsCount() {
+      return AppState.notifications.filter(n => !n.read).length;
+    }
+
+    function updateUnreadBadge() {
+      const badge = document.getElementById('unread-badge');
+      const count = getUnreadNotificationsCount();
+      if (badge) {
+        if (count > 0) {
+          badge.innerText = count;
+          badge.classList.remove('hidden');
+        } else {
+          badge.classList.add('hidden');
+        }
+      }
+    }
+
+    function buildNotificationsViewHTML() {
+      // Mark all viewed as read upon section load
+      AppState.notifications.forEach(n => n.read = true);
+      saveAppState();
+      setTimeout(updateUnreadBadge, 200);
+
+      return `
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 dark:bg-slate-900 dark:border-slate-850 animate-in fade-in duration-300">
+          <div class="flex justify-between items-center mb-6 border-b border-gray-100 dark:border-slate-800 pb-4">
+            <div>
+              <h3 class="font-bold text-lg text-slate-855 dark:text-white">Historical Alerts Log</h3>
+              <p class="text-xs text-gray-400 font-medium">Review system alarms and schedules activated today.</p>
+            </div>
+            <button onclick="clearAllNotifications()" class="text-xs font-bold text-rose-500 hover:underline">Reset Alarm Log</button>
+          </div>
+
+          <div class="space-y-3.5">
+            ${AppState.notifications.length === 0 
+              ? `<p class="text-center py-12 text-slate-400 text-xs italic">No clinical alarms triggered in this cycle.</p>`
+              : AppState.notifications.map(n => {
+                  return `
+                    <div class="p-4 bg-slate-50 border border-gray-100/50 rounded-xl dark:bg-slate-850 dark:border-slate-800 flex items-center justify-between gap-4">
+                      <div class="flex items-center gap-3">
+                        <span class="text-xl">🔔</span>
+                        <div>
+                          <p class="text-sm font-semibold text-slate-800 dark:text-slate-100">${n.body}</p>
+                          <p class="text-[10px] text-slate-400 mt-1 font-mono">${new Date(n.timestamp).toLocaleTimeString()}</p>
+                        </div>
+                      </div>
+                    </div>
+                  `;
+                }).join('')
+            }
+          </div>
+        </div>
+      `;
+    }
+
+    function clearAllNotifications() {
+      if (confirm("Clear local notification record archives?")) {
+        AppState.notifications = [];
+        triggerToast("History log reset.", "info");
+        saveAppState();
+        renderActiveView();
+        updateUnreadBadge();
+      }
+    }
+
+
+    // 8. SYSTEM SETTINGS PANEL
+    function buildSettingsViewHTML() {
+      return `
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in fade-in duration-300">
+          <!-- Main options container -->
+          <div class="lg:col-span-8 bg-white rounded-2xl p-6 shadow-sm border border-gray-100 dark:bg-slate-900 dark:border-slate-850 divide-y divide-slate-100 dark:divide-slate-800 space-y-4">
+            <div class="pb-4">
+              <h3 class="font-bold text-lg text-slate-855 dark:text-white">Workspace Configuration</h3>
+              <p class="text-xs text-gray-400 font-medium">Fine-tune medical sound metrics, notification channels, and memory flushes.</p>
+            </div>
+
+            <div class="py-4 flex justify-between items-center">
+              <div>
+                <h4 class="font-bold text-sm text-slate-700 dark:text-slate-200">Alert Sound & System Badging</h4>
+                <p class="text-xs text-slate-400 pr-4">Allow dispatching standard clinical reminders to the desktop agent screen.</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="set-notify-chk" ${AppState.settings.notificationsEnabled ? 'checked' : ''} onchange="toggleNotificationsSetting()" class="sr-only peer" />
+                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#00B894] dark:bg-slate-755"></div>
+              </label>
+            </div>
+
+            <div class="py-4 pt-6 flex justify-between items-center">
+              <div>
+                <h4 class="font-bold text-sm text-slate-700 dark:text-slate-200">Reset Application Storage</h4>
+                <p class="text-xs text-slate-400">Completely flush all profile, daily list records, and medication inventories.</p>
+              </div>
+              <button onclick="clearTotalAppData()" class="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-bold transition-all cursor-pointer">Flush Database</button>
+            </div>
+          </div>
+
+          <!-- JSON Sync, Backup / Restore panel -->
+          <div class="lg:col-span-4 bg-white rounded-2xl p-6 shadow-sm border border-gray-100 dark:bg-slate-900 dark:border-slate-850 space-y-6">
+            <div>
+              <h3 class="font-bold text-base mb-1 text-slate-855 dark:text-white">Workspace Core Backup</h3>
+              <p class="text-xs text-gray-400 leading-normal">Safely backup or reload state payloads directly using portable JSON syntax streams.</p>
+            </div>
+
+            <div class="space-y-4">
+              <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">JSON Payload area</label>
+                <textarea id="settings-json-area" placeholder="Paste medical state backup payload stream here..." class="w-full h-24 p-3 border border-slate-200 dark:border-slate-800 text-xs rounded-xl font-mono focus:ring-2 focus:ring-[#00B894] focus:outline-none dark:bg-slate-950"></textarea>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <button onclick="importJSONState()" class="py-2.5 bg-[#00B894] hover:bg-[#009E7E] text-white font-bold rounded-xl text-xs transition-all cursor-pointer text-center">Import State</button>
+                <button onclick="exportJSONState()" class="py-2.5 bg-[#0F4C81] hover:bg-[#1A5C96] text-white font-bold rounded-xl text-xs transition-all cursor-pointer text-center">Copy Payload</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function toggleNotificationsSetting() {
+      const chk = document.getElementById('set-notify-chk');
+      AppState.settings.notificationsEnabled = chk.checked;
+      saveAppState();
+      triggerToast(`Push warnings ${chk.checked ? "Activated" : "Deactivated"}`, "info");
+    }
+
+    function clearTotalAppData() {
+      if (confirm("Flushing CareMeds Core databases will reset streaking, profile and medication arrays entirely! Continue?")) {
+        localStorage.removeItem('caremeds_dashboard_data');
+        triggerToast("Storage clear complete. Refreshing local nodes.", "danger");
+        setTimeout(() => location.reload(), 1500);
+      }
+    }
+
+    function exportJSONState() {
+      const payload = JSON.stringify(AppState, null, 2);
+      const area = document.getElementById('settings-json-area');
+      if (area) area.value = payload;
+      navigator.clipboard.writeText(payload);
+      triggerToast("Payload copied to system clipboard.", "success");
+    }
+
+    function importJSONState() {
+      const area = document.getElementById('settings-json-area');
+      if (!area || !area.value.trim()) {
+        alert("Please paste a valid JSON backup payload first.");
+        return;
+      }
+      try {
+        const parsed = JSON.parse(area.value.trim());
+        if (parsed.profile && parsed.medicines) {
+          localStorage.setItem('caremeds_dashboard_data', JSON.stringify(parsed));
+          triggerToast("Sync complete. Re-binding console...", "success");
+          setTimeout(() => location.reload(), 1500);
+        } else {
+          alert("Invalid backup metadata keys. Make sure profile and medicines are set.");
+        }
+      } catch (err) {
+        alert("Criticial formatting syntax error in parsed JSON string.");
+      }
+    }
+
+
+    // --- BACKGROUND MED REMINDER POLLING ---
+    const notifiedLogsHistory = {};
+
+    function pollActiveMedicationReminders() {
+      if (!AppState.settings.notificationsEnabled) return;
+
+      const now = new Date();
+      const todayStr = formatLocalDate(now);
+      const currTimeMinutesSinceMidnight = now.getHours() * 60 + now.getMinutes();
+
+      AppState.medicines.forEach(med => {
+        if (todayStr >= med.startDate && todayStr <= med.endDate) {
+          med.slots.forEach(slot => {
+            const [h, m] = timeSlots[slot].split(':').map(Number);
+            const slotMinutes = h * 60 + m;
+
+            // Check if slot falls in a window 5 minutes from now
+            const diff = slotMinutes - currTimeMinutesSinceMidnight;
+            if (diff >= 0 && diff <= 5) {
+              const notificationUniqueKey = `${todayStr}_${med.id}_${slot}`;
+              
+              if (!notifiedLogsHistory[notificationUniqueKey]) {
+                notifiedLogsHistory[notificationUniqueKey] = true;
+                triggerAlarmAlert(med, slot);
+              }
+            }
+          });
+        }
+      });
+    }
+
+    function triggerAlarmAlert(med, slot) {
+      const message = `Time for your ${slot} dose! Take ${med.name} (${med.dosage}) now.`;
+      
+      // Store in unread notifications log
+      AppState.notifications.unshift({
+        id: String(Date.now()),
+        body: message,
+        timestamp: new Date().toISOString(),
+        read: false
+      });
+      if (AppState.notifications.length > 20) AppState.notifications.pop(); // Keep 20 items limit
+      
+      saveAppState();
+      updateUnreadBadge();
+      triggerToast(message, "info");
+
+      // Browser Notification push
+      if (window.Notification && Notification.permission === "granted") {
+        new Notification("CareMeds Medication Due Now", {
+          body: message,
+          icon: "/favicon.ico"
+        });
+      }
+
+      // Re-trigger layout updates if view is active
+      if (AppState.activeView === 'dashboard' || AppState.activeView === 'notifications') {
+        renderActiveView();
+      }
+    }
+  </script>
+</body>
+</html>
